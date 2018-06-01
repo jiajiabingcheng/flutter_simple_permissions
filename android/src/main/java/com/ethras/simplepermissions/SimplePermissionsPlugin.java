@@ -6,8 +6,6 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.provider.Settings;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.util.Log;
 
 import io.flutter.plugin.common.MethodChannel;
@@ -21,21 +19,21 @@ import io.flutter.plugin.common.PluginRegistry.Registrar;
  * SimplePermissionsPlugin
  */
 public class SimplePermissionsPlugin implements MethodCallHandler, PluginRegistry.RequestPermissionsResultListener {
-    private Registrar registrar;
     private Result result;
+    private Activity activity;
 
     /**
      * Plugin registration.
      */
     public static void registerWith(Registrar registrar) {
         final MethodChannel channel = new MethodChannel(registrar.messenger(), "simple_permissions");
-        SimplePermissionsPlugin simplePermissionsPlugin = new SimplePermissionsPlugin(registrar);
+        SimplePermissionsPlugin simplePermissionsPlugin = new SimplePermissionsPlugin(registrar.activity());
         channel.setMethodCallHandler(simplePermissionsPlugin);
         registrar.addRequestPermissionsResultListener(simplePermissionsPlugin);
     }
 
-    private SimplePermissionsPlugin(Registrar registrar) {
-        this.registrar = registrar;
+    private SimplePermissionsPlugin(Activity activity) {
+        this.activity = activity;
     }
 
     @Override
@@ -50,6 +48,7 @@ public class SimplePermissionsPlugin implements MethodCallHandler, PluginRegistr
                 permission = call.argument("permission");
                 int value = checkPermission(permission) ? 3 : 2;
                 result.success(value);
+                break;
             case "checkPermission":
                 permission = call.argument("permission");
                 result.success(checkPermission(permission));
@@ -70,7 +69,6 @@ public class SimplePermissionsPlugin implements MethodCallHandler, PluginRegistr
     }
 
     private void openSettings() {
-        Activity activity = registrar.activity();
         Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                 Uri.parse("package:" + activity.getPackageName()));
         intent.addCategory(Intent.CATEGORY_DEFAULT);
@@ -93,15 +91,11 @@ public class SimplePermissionsPlugin implements MethodCallHandler, PluginRegistr
             case "READ_EXTERNAL_STORAGE":
                 res = Manifest.permission.READ_EXTERNAL_STORAGE;
                 break;
-            case "ACCESS_FINE_LOCATION":
-                res = Manifest.permission.ACCESS_FINE_LOCATION;
-                break;
             case "ACCESS_COARSE_LOCATION":
                 res = Manifest.permission.ACCESS_COARSE_LOCATION;
                 break;
             case "WHEN_IN_USE_LOCATION":
-                res = Manifest.permission.ACCESS_FINE_LOCATION;
-                break;
+            case "ACCESS_FINE_LOCATION":
             case "ALWAYS_LOCATION":
                 res = Manifest.permission.ACCESS_FINE_LOCATION;
                 break;
@@ -122,18 +116,16 @@ public class SimplePermissionsPlugin implements MethodCallHandler, PluginRegistr
     }
 
     private void requestPermission(String permission) {
-        Activity activity = registrar.activity();
         permission = getManifestPermission(permission);
         Log.i("SimplePermission", "Requesting permission : " + permission);
         String[] perm = {permission};
-        ActivityCompat.requestPermissions(activity, perm, 0);
+        activity.requestPermissions(perm, 0);
     }
 
     private boolean checkPermission(String permission) {
-        Activity activity = registrar.activity();
         permission = getManifestPermission(permission);
         Log.i("SimplePermission", "Checking permission : " + permission);
-        return PackageManager.PERMISSION_GRANTED == ContextCompat.checkSelfPermission(activity, permission);
+        return PackageManager.PERMISSION_GRANTED == activity.checkSelfPermission(permission);
     }
 
     @Override
